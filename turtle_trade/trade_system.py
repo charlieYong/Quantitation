@@ -40,5 +40,6 @@ def cal_position_unit (n, total_assets, n_unit=1, percent=0.01):
     total_assets: 总资产
     percent: 账户占比
     '''
-    return (total_assets * percent) / (n * n_unit)
+    unit = int ((total_assets * percent) / (n * n_unit)) 
+    return unit - unit%100
 
