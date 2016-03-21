@@ -42,14 +42,3 @@ def cal_position_unit (n, total_assets, n_unit=1, percent=0.01):
     '''
     return (total_assets * percent) / (n * n_unit)
 
-def cal_days_break_throught_price (price_list, days=20):
-    '''根据价格列表计算N日突破的价格'''
-    price = 0
-    count = 0
-    while count < days:
-        p = price_list[-1 - count]
-        if p > price:
-            price = p
-        count += 1
-    return price
-
