@@ -49,52 +49,99 @@ def get_price_list (data, start, end):
         l.append (row[4])
     return l
 
+class TradeRecord(object):
+    '''交易记录'''
+    def __init__(self, tradetype, price, positions):
+        self._record_list = [(tradetype, price, positions)]
+
+    def set_info(self, n, unit):
+        self.n = n
+        self.unit = unit
+        self.loss_price = self._record_list[0][1] - 2*n
+
+    def add(self, tradetype, price, positions):
+        self._record_list.append((tradetype, price, positions))
+        if -1 == tradetype:
+            self.loss_price += n/2
+
+    def get_record_list(self):
+        return self._record_list
+
+    def get_last_buy_in_price(self):
+        p = 0
+        for (tradetype, price, positions) in self._record_list:
+            if 1 == tradetype:
+                p = price
+        return p
+
+    def get_total_positions(self):
+        total = 0
+        for (tradetype, price, positions) in self._record_list:
+            total += (tradetype * positions)
+        return total
+
+    def profit(self):
+        total = 0
+        for (tradetype, price, positions) in self._record_list:
+            total += (tradetype * price * positions)
+        return total
+
+    def print_trade(self):
+        print "n=%f, position unit=%d" % (self.n, self.unit)
+        for record in self._record_list:
+            print "type=%d, price=%f, positions=%d" % record
+        print "Total Profit:", self.profit ()
+
 def back_testing (data, nday_break_through=20):
     '''根据历史数据做交易模拟进行回测'''
     # 原始资产
     CurrentAssets = TotalAssets = 10 * 10000
-    in_trading = False
-    position_price = 0
-    loss_price = 0
+    MaxPositions = 4
+    trade = None
     # 从第n+1日开始遍历，计算突破
     for i in xrange (nday_break_through+1, len (data)):
-        day = data[i]
+        xdate, xopen, xhigh, xlow, xclose, xtr, xn = data[i]
         # 参与突破持有中，检查是否需要退出（止损/10日突破退出法）
-        if in_trading:
+        if trade is not None: 
+            if MaxPositions > trade.get_total_positions () and (xhigh - trade.get_last_buy_in_price ()) >= (trade.n/2):
+                # 价格上涨1/2N，加仓
+                while (xhigh - trade.get_last_buy_in_price ()) >= (trade.n/2):
+                    price = trade.get_last_buy_in_price () + trade.n/2
+                    trade.add (1, price, 1)
+                    print 'incr position, date=%s, price=%f, positions=%d' % (xdate, price, trade.get_total_positions ())
+                    if trade.get_total_positions ()>= MaxPositions:
+                        break
             exit_price = 0
             # 是否触发止损
-            if day[3] <= loss_price:
-                exit_price = loss_price
-                in_trading = False
-                print 'loss to exit trade: date=%s, price=%f' % (day[0], exit_price)
+            if xhigh <= trade.loss_price:
+                exit_price = trade.loss_price
+                print 'loss to exit trade: date=%s, price=%f' % (xdate, exit_price)
             else:
                 # 10日突破退出法
                 price_list = get_price_list (data, i-10, i)
                 min_price = min (price_list)
-                if day[3] <= min_price:
+                if xlow <= min_price:
                     exit_price = min_price
-                    in_trading = False
-                    print '10 days exit trade: date=%s, price=%f' % (day[0], exit_price)
-            if not in_trading:
-                profit = position * (exit_price - position_price)
-                print 'date=%s, price=%f, position=%d, profit=%.2f' % (day[0], exit_price, position, profit)
-                CurrentAssets += profit
+                    print '10 days exit trade: date=%s, price=%f' % (xdate, exit_price)
+            if exit_price > 0:
+                trade.print_trade ()
+                CurrentAssets += trade.profit ()
                 print 'Assets: %.2f(%d)' % (CurrentAssets, TotalAssets)
+                trade = None
                 continue
         # 空仓中，检查是否有突破发生
         else:
             price_list = get_price_list(data, i-20, i)
             break_through_price = max (price_list)
-            if not day[2] > break_through_price:
+            if not xhigh > break_through_price:
                 continue
             # 突破
-            in_trading = True
-            position = trade_system.cal_position_unit (day[6], CurrentAssets)
-            position_price = break_through_price
-            loss_price = position_price - 2*day[6]
+            unit = trade_system.cal_position_unit (xn, CurrentAssets)
+            trade = TradeRecord (1, break_through_price, 1)
+            trade.set_info (xn, unit)
             # 测试只买入一个头寸单位的仓位
-            print 'break through: date=%s, price=%f, loss_price=%f position=%d, n=%f' % (day[0] , break_through_price,
-            loss_price, position, day[6])
+            print 'break through: date=%s, price=%f, loss_price=%f unit=%d, n=%f' % (xdate , break_through_price,
+            trade.loss_price, unit, xn)
 
 
 if __name__ == "__main__":
