@@ -49,20 +49,33 @@ def get_price_list (data, start, end):
         l.append (row[4])
     return l
 
+class Account(object):
+    '''交易账号'''
+    def __init__(self, total_assets):
+        self._total_assets = total_assets
+        self.trade_list = []
+
+    def trade(self, item):
+        self.trade_list.append (item)
+
 class TradeRecord(object):
     '''交易记录'''
-    def __init__(self, tradetype, price, positions):
-        self._record_list = [(tradetype, price, positions)]
-
-    def set_info(self, n, unit):
+    def __init__(self, n, unit):
         self.n = n
         self.unit = unit
-        self.loss_price = self._record_list[0][1] - 2*n
+        self.is_trading = True
 
-    def add(self, tradetype, price, positions):
+    def buy(self, tradetype, price, positions):
+        self.is_trading = True
         self._record_list.append((tradetype, price, positions))
         if -1 == tradetype:
             self.loss_price += n/2
+
+    def sell(self, tradetype, price, positions):
+        self.is_trading = False
+
+    def total_assets(self):
+        return 0
 
     def get_record_list(self):
         return self._record_list
@@ -83,7 +96,7 @@ class TradeRecord(object):
     def profit(self):
         total = 0
         for (tradetype, price, positions) in self._record_list:
-            total += (tradetype * price * positions)
+            total += (tradetype * price * positions * self.unit)
         return total
 
     def print_trade(self):
@@ -96,13 +109,13 @@ def back_testing (data, nday_break_through=20):
     '''根据历史数据做交易模拟进行回测'''
     # 原始资产
     CurrentAssets = TotalAssets = 10 * 10000
-    MaxPositions = 4
+    MaxPositions = 2
     trade = None
     # 从第n+1日开始遍历，计算突破
     for i in xrange (nday_break_through+1, len (data)):
         xdate, xopen, xhigh, xlow, xclose, xtr, xn = data[i]
         # 参与突破持有中，检查是否需要退出（止损/10日突破退出法）
-        if trade is not None: 
+        if trade is not None:
             if MaxPositions > trade.get_total_positions () and (xhigh - trade.get_last_buy_in_price ()) >= (trade.n/2):
                 # 价格上涨1/2N，加仓
                 while (xhigh - trade.get_last_buy_in_price ()) >= (trade.n/2):
