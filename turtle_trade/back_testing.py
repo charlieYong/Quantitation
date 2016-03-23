@@ -49,14 +49,6 @@ def get_price_list (data, start, end):
         l.append (row[4])
     return l
 
-class Account(object):
-    '''交易账号'''
-    def __init__(self, total_assets):
-        self._total_assets = total_assets
-        self.trade_list = []
-
-    def trade(self, item):
-        self.trade_list.append (item)
 
 class TradeRecord(object):
     '''交易记录'''
