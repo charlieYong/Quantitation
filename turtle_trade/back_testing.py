@@ -7,6 +7,7 @@ import pandas as pd
 import tushare as ts
 
 import trade_system
+from trade_account import *
 
 '''
 使用历史数据对海龟交易系统做回测
@@ -62,9 +63,9 @@ def back_testing (data, nday_break_through=20):
         if account.has_position (Code):
             while account.current_assets >= (account.unit_value(Code) * xlow) and (xhigh - account.last_buyin_price (Code)) >= (account.n_value (Code)/2):
                 # 价格上涨1/2N，加仓
-                price = account.last_buyin_price () + account.n_value/2
+                print 'incr position, date=%s' % xdate
+                price = account.last_buyin_price (Code) + account.n_value(Code)/2
                 account.buy (xdate, Code, price, account.unit_value (Code))
-                print 'incr position, date=%s, price=%f' % (xdate, price)
 
             # 是否触发止损
             position_list = account.position_detail_list (Code)
@@ -73,6 +74,7 @@ def back_testing (data, nday_break_through=20):
                     account.sell (xdate, Code, position.loss_price, position.count)
             if not account.has_position (Code):
                 account.print_assets ()
+                account.clear ()
                 continue
             # 10日突破退出法
             price_list = get_price_list (data, i-10, i)
@@ -80,6 +82,7 @@ def back_testing (data, nday_break_through=20):
             if xlow <= min_price:
                 account.sell_all (xdate, Code, min_price)
                 account.print_assets ()
+                account.clear ()
         # 空仓中，检查是否有突破发生
         else:
             price_list = get_price_list(data, i-20, i)
@@ -87,11 +90,11 @@ def back_testing (data, nday_break_through=20):
             if not xhigh > break_through_price:
                 continue
             # 突破
+            print 'break through: date=%s, price=%f' % (xdate , break_through_price)
             unit = trade_system.cal_position_unit (xn, account.current_assets)
             account.set_market_info (Code, xn, unit)
             account.buy (xdate, Code, break_through_price, unit)
             # 测试只买入一个头寸单位的仓位
-            print 'break through: date=%s, price=%f, buy in' % (xdate , break_through_price)
 
 if __name__ == "__main__":
     if len (sys.argv) != 2:
