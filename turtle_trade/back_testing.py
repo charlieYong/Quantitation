@@ -33,6 +33,7 @@ def cal_first_tr_and_n (data_list):
 def cal_tr_and_n (data_list):
     # 先计算前20日的TR值以计算出第一个N值
     first = data_list[1]
+    print data_list
     tr, n = cal_first_tr_and_n (data_list)
     # 计算每日的TR值和N值
     # date, open, high, low, close, tr, n
@@ -66,11 +67,11 @@ def back_testing (data, nday_break_through=20):
                 print 'incr position, date=%s' % xdate
                 price = account.last_buyin_price (Code) + account.n_value(Code)/2
                 account.buy (xdate, Code, price, account.unit_value (Code))
-
             # 是否触发止损
             position_list = account.position_detail_list (Code)
             for position in position_list:
                 if xlow <= position.loss_price:
+                    print 'loss position, date=', xdate
                     account.sell (xdate, Code, position.loss_price, position.count)
             if not account.has_position (Code):
                 account.print_assets ()
@@ -80,6 +81,7 @@ def back_testing (data, nday_break_through=20):
             price_list = get_price_list (data, i-10, i)
             min_price = min (price_list)
             if xlow <= min_price:
+                print 'exit all position, date=', xdate
                 account.sell_all (xdate, Code, min_price)
                 account.print_assets ()
                 account.clear ()
@@ -97,11 +99,17 @@ def back_testing (data, nday_break_through=20):
             # 测试只买入一个头寸单位的仓位
 
 if __name__ == "__main__":
-    if len (sys.argv) != 2:
+    if len (sys.argv) <= 1:
         print "usage: %s datafile" % sys.argv[0]
+        print "usage: %s code startdate enddate" % sys.argv[0]
         sys.exit()
-    # 加载数据，按日期重新排序，导出list时为时间升序
-    df = pd.read_csv (sys.argv[1]).sort_index (0, None, False)
+    df = None
+    if len (sys.argv) == 2:
+        # 加载数据，按日期重新排序，导出list时为时间升序
+        df = pd.read_csv (sys.argv[1]).sort_index (0, None, False)
+    elif len (sys.argv) == 4:
+        code, start, end = sys.argv[1:4]
+        df = ts.get_hist_data (code, start, end).sort_index (0, None, False)
     # 计算每日的TR值和N值
     data = cal_tr_and_n (df.values.tolist ())
     # 进行回测
