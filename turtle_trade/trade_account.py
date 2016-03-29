@@ -91,6 +91,9 @@ class Account(object):
     def last_buyin_price(self, code):
         return self.position_dict[code][-1].buy_price
 
+    def first_buyin_price(self, code):
+        return self.position_dict[code][0].buy_price
+
     def clear(self):
         self.position_dict = {}
         self.market = {}

@@ -8,6 +8,7 @@ import tushare as ts
 
 import trade_system
 from trade_account import *
+from break_through import *
 
 '''
 使用历史数据对海龟交易系统做回测
@@ -64,13 +65,32 @@ def back_testing (Code, data, nday_break_through=20):
         xdate, xopen, xhigh, xlow, xclose, xtr, xn = data[i]
         # 如果有被忽略的突破，则先计算
         if no_trade_break is not None:
-            price_list = get_price_list(data, i-50, i)
-            break_through_price = max (price_list)
-            if xhigh > break_through_price:
-                print '50s break through: date=%s, price=%f' % (xdate , break_through_price)
+            # 处理退出和止损
+            if xlow <= no_trade_break.loss_price:
+                no_trade_break.complete(no_trade_break.loss_price)
+                is_last_break_profit = no_trade_break.is_profitable ()
+                no_trade_break = None
             else:
-                # 处理退出和止损
-
+                price_list = get_price_list (data, i-10, i)
+                min_price = min (price_list)
+                if xlow <= min_price:
+                    no_trade_break.complete(min_price)
+                    is_last_break_profit = no_trade_break.is_profitable ()
+                    no_trade_break = None
+            if no_trade_break is None:
+                print '*'*8, 'complete no-trade-break, result:', is_last_break_profit, '*'*8
+                continue
+            # 处理50日突破
+            if i > 50:
+                price_list = get_price_list(data, i-50, i)
+                break_through_price = max (price_list)
+                if xhigh > break_through_price:
+                    print '50s break through: date=%s, price=%f' % (xdate , break_through_price)
+                    unit = trade_system.cal_position_unit (xn, account.current_assets)
+                    account.set_market_info (Code, xn, unit)
+                    account.buy (xdate, Code, break_through_price, unit)
+                    no_trade_break = None
+            continue
 
         # 参与突破持有中，检查是否需要退出（止损/10日突破退出法）
         if account.has_position (Code):
@@ -88,12 +108,16 @@ def back_testing (Code, data, nday_break_through=20):
             if not account.has_position (Code):
                 account.print_assets ()
                 account.clear ()
+                is_last_break_profit = False
+                no_trade_break = None
                 continue
             # 10日突破退出法
             price_list = get_price_list (data, i-10, i)
             min_price = min (price_list)
             if xlow <= min_price:
                 print 'exit all position, date=', xdate
+                is_last_break_profit = min_price > account.first_buyin_price(Code) 
+                no_trade_break = None
                 account.sell_all (xdate, Code, min_price)
                 account.print_assets ()
                 account.clear ()
@@ -105,10 +129,13 @@ def back_testing (Code, data, nday_break_through=20):
                 continue
             # 突破
             print '20s break through: date=%s, price=%f' % (xdate , break_through_price)
+            if is_last_break_profit:
+                print 'last break is profitable, ignore this break'
+                no_trade_break = BreakThrough(break_through_price, break_through_price - 2*xn)
+                continue
             unit = trade_system.cal_position_unit (xn, account.current_assets)
             account.set_market_info (Code, xn, unit)
             account.buy (xdate, Code, break_through_price, unit)
-            last_break = BreakThrough (break_through_price, break_through_price - 2*xn)
 
 if __name__ == "__main__":
     if len (sys.argv) != 4:
