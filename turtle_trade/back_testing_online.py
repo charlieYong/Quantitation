@@ -11,7 +11,7 @@ from trade_account import *
 
 '''
 使用历史数据对海龟交易系统做回测
-1) 根据数据文件加载该股票的历史数据
+1) 根据输入的代码，开始日期和结束日期获取历史数据
 2）遍历计算真实波动值（TR）和N值
 3）遍历计算好的数据，按照20日突破法进行交易模拟
 '''
@@ -52,15 +52,26 @@ def get_price_list (data, start, end):
         l.append (row[4])
     return l
 
-def back_testing (data, nday_break_through=20):
+def back_testing (Code, data, nday_break_through=20):
     '''根据历史数据做交易模拟进行回测'''
+    no_trade_break = None
+    is_last_break_profit = False
     # 原始资产
-    Code = "11111"
     TotalAssets = 10 * 10000
     account = Account(TotalAssets)
     # 从第n+1日开始遍历，计算突破
     for i in xrange (nday_break_through+1, len (data)):
         xdate, xopen, xhigh, xlow, xclose, xtr, xn = data[i]
+        # 如果有被忽略的突破，则先计算
+        if no_trade_break is not None:
+            price_list = get_price_list(data, i-50, i)
+            break_through_price = max (price_list)
+            if xhigh > break_through_price:
+                print '50s break through: date=%s, price=%f' % (xdate , break_through_price)
+            else:
+                # 处理退出和止损
+
+
         # 参与突破持有中，检查是否需要退出（止损/10日突破退出法）
         if account.has_position (Code):
             while account.current_assets >= (account.unit_value(Code) * xlow) and (xhigh - account.last_buyin_price (Code)) >= (account.n_value (Code)/2):
@@ -90,14 +101,14 @@ def back_testing (data, nday_break_through=20):
         else:
             price_list = get_price_list(data, i-20, i)
             break_through_price = max (price_list)
-            if not xhigh > break_through_price:
+            if xhigh <= break_through_price:
                 continue
             # 突破
-            print 'break through: date=%s, price=%f' % (xdate , break_through_price)
+            print '20s break through: date=%s, price=%f' % (xdate , break_through_price)
             unit = trade_system.cal_position_unit (xn, account.current_assets)
             account.set_market_info (Code, xn, unit)
             account.buy (xdate, Code, break_through_price, unit)
-            # 测试只买入一个头寸单位的仓位
+            last_break = BreakThrough (break_through_price, break_through_price - 2*xn)
 
 if __name__ == "__main__":
     if len (sys.argv) != 4:
@@ -110,4 +121,4 @@ if __name__ == "__main__":
     # 计算每日的TR值和N值
     data = cal_tr_and_n (df)
     # 进行回测
-    back_testing (data)
+    back_testing (code, data)
