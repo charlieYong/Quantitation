@@ -100,7 +100,7 @@ def back_testing (data, nday_break_through=20):
             # 测试只买入一个头寸单位的仓位
 
 if __name__ == "__main__":
-    if len (sys.argv) <= 1:
+    if len (sys.argv) != 4:
         print "usage: %s code startdate enddate" % sys.argv[0]
         sys.exit()
     code, start, end = sys.argv[1:4]
