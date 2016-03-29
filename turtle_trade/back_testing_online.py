@@ -16,33 +16,34 @@ from trade_account import *
 3）遍历计算好的数据，按照20日突破法进行交易模拟
 '''
 
-def cal_first_tr_and_n (data_list):
+def cal_first_tr_and_n (df):
     total = 0
     i = 0
     tr = 0
     while i < 20:
         # 第一天的数据用于计算TR
-        data = data_list[i + 1]
-        v = trade_system.cal_tr (data[2], data[4], data_list[i][3])
+        data = df.iloc[i + 1]
+        v = trade_system.cal_tr (data.high, data.low, df.iloc[i].close)
         if 0 == i:
             tr = v
         total += v
         i += 1
     return tr, total/20
 
-def cal_tr_and_n (data_list):
+def cal_tr_and_n (df):
     # 先计算前20日的TR值以计算出第一个N值
-    first = data_list[1]
-    print data_list
-    tr, n = cal_first_tr_and_n (data_list)
+    tuples = df.itertuples()
+    # 第一天去掉
+    next (tuples)
+    first = next (tuples)
+    tr, n = cal_first_tr_and_n (df)
     # 计算每日的TR值和N值
     # date, open, high, low, close, tr, n
-    data = [[first[0], first[1], first[2], first[4], first[3], tr, n]]
-    for i in xrange (2, len (data_list)):
-        item = data_list[i]
-        tr = trade_system.cal_tr (item[2], item[4], data[-1][4])
+    data = [[first.Index, first.open, first.high, first.low, first.close, tr, n]]
+    for item in tuples:
+        tr = trade_system.cal_tr (item.high, item.low, data[-1][4])
         n = trade_system.cal_real_n (data[-1][6], tr)
-        data.append ([item[0], item[1], item[2], item[4], item[3], tr, n])
+        data.append ([item.Index, item.open, item.high, item.low, item.close, tr, n])
     return data
 
 def get_price_list (data, start, end):
@@ -100,11 +101,13 @@ def back_testing (data, nday_break_through=20):
 
 if __name__ == "__main__":
     if len (sys.argv) <= 1:
-        print "usage: %s datafile" % sys.argv[0]
+        print "usage: %s code startdate enddate" % sys.argv[0]
         sys.exit()
+    code, start, end = sys.argv[1:4]
+    df = ts.get_hist_data (code, start, end)
     # 加载数据，按日期重新排序，导出list时为时间升序
-    df = pd.read_csv (sys.argv[1]).sort_index (0, None, False)
+    df = df.reindex (index=df.index[::-1])
     # 计算每日的TR值和N值
-    data = cal_tr_and_n (df.values.tolist ())
+    data = cal_tr_and_n (df)
     # 进行回测
     back_testing (data)
