@@ -19,7 +19,6 @@ class BreakThroughMonitor(object):
         if self.code_list is None:
             self.code_list = self.stock_info.index.tolist()
         self.stoped_set = set ()
-        #self.load_stoped_stock ()
 
     def last_trade_date (self):
         '''找到最近一个交易日期'''
@@ -41,19 +40,30 @@ class BreakThroughMonitor(object):
         d = datetime.datetime.strptime (end, DATE_FORMAT)
         return (d + datetime.timedelta (-nday)).strftime (DATE_FORMAT)
 
-    def load_stoped_stock (self):
-        d = self.last_trade_date ()
-        for code in self.code_list:
-            df = ts.get_hist_data (code, d, d)
-            if len (df.index) <= 0:
-                print "stoped:", code
-                self.stoped_set.add (code)
+    def get_stock_info (self, code, cur_price):
+        info = self.stock_info.loc[code]
+        return "name=%s, out=%.2f, total=%.2f" % (info.name, info.outstanding*cur_price/10000, info.totals*cur_price/10000) 
 
     def start (self):
         end = self.last_trade_date ()
         start = self.get_start_date (end, 100)
-        print end, start
-        #for code in self.code_list:
+        for code in self.code_list:
+            #print "check ", code, start, end
+            df = ts.get_hist_data (code, start, end)
+            if len (df.index) < 20 or end != df.index[0]:
+                continue
+            i = 20
+            max_price = 0
+            while i > 0:
+                price = df.iloc[i-1].close
+                if price > max_price:
+                    max_price = price
+                i -= 1
+            cur_price = df.iloc[0].close
+            if cur_price < max_price and cur_price*1.08 >= max_price:
+                percent = "%.2f%%" % ((max_price - cur_price)/cur_price * 100)
+                print "about to break through:", code, cur_price, max_price, percent, self.get_stock_info (code, cur_price) 
+
 
 if __name__ == "__main__":
     b = BreakThroughMonitor()
