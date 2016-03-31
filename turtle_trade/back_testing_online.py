@@ -97,13 +97,17 @@ def back_testing (Code, data, nday_break_through=20):
                     account.buy (xdate, Code, break_through_price, unit)
                     no_trade_break = None
             continue
-
         # 参与突破持有中，检查是否需要退出（止损/10日突破退出法）
         if account.has_position (Code):
-            while account.current_assets >= (account.unit_value(Code) * xlow) and (xhigh - account.last_buyin_price (Code)) >= (account.n_value (Code)/2):
-                # 价格上涨1/2N，加仓
-                print 'incr position, date=%s' % xdate
+            # 更新当前价格
+            for position in account.position_dict[Code]:
+                position.set_current_price (xclose)
+            # 价格每上涨1/2N，加一个单位仓
+            while (xhigh - account.last_buyin_price (Code)) >= (account.n_value (Code)/2):
                 price = account.last_buyin_price (Code) + account.n_value(Code)/2
+                if account.current_assets < (account.unit_value(Code) * price):
+                    break
+                print 'incr position, date=%s' % xdate
                 account.buy (xdate, Code, price, account.unit_value (Code))
             # 是否触发止损
             for position in account.position_dict[Code]:
@@ -121,7 +125,7 @@ def back_testing (Code, data, nday_break_through=20):
             if xlow <= min_price:
                 print 'exit all position, date=', xdate
                 account.sell_all (xdate, Code, min_price)
-                is_last_break_profit = account.get_trade_profit () > 0 
+                is_last_break_profit = account.get_trade_profit (Code) > 0
                 no_trade_break = None
                 account.print_assets ()
                 account.clear ()
@@ -139,6 +143,7 @@ def back_testing (Code, data, nday_break_through=20):
             unit = cal_position_unit (xn, account.current_assets)
             account.set_market_info (Code, xn, unit)
             account.buy (xdate, Code, break_through_price, unit)
+    account.print_assets ()
 
 if __name__ == "__main__":
     if len (sys.argv) != 4:

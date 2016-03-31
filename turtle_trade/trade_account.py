@@ -19,7 +19,11 @@ class TurtleTradeNode(object):
         self.buy_price = price
         self.count = count
         self.loss_price = loss_price
+        self.current_price = price
         self.sell_price = 0
+
+    def set_current_price(self, price):
+        self.current_price = price
 
     def sell(self, sell_price):
         self.sell_price = sell_price
@@ -28,13 +32,15 @@ class TurtleTradeNode(object):
         return self.sell_price > 0
 
     def get_profit(self):
-        return self.count * (self.sell_price - self.buy_price)
+        if self.is_complete ():
+            return self.count * (self.sell_price - self.buy_price)
+        return self.count * (self.current_price - self.buy_price)
 
     def __str__(self):
-        profit = 0
         if self.is_complete ():
-            profit = self.get_profit ()
-        return "buy_price=%f, count=%d, loss_price=%f, sell_price=%f, profit=%f" % (self.buy_price, self.count, self.loss_price, self.sell_price, profit)
+            return "buy_price=%f, count=%d, loss_price=%f, sell_price=%f, profit=%f" % (self.buy_price, self.count, self.loss_price, self.sell_price, self.get_profit ())
+        else:
+            return "buy_price=%f, count=%d, loss_price=%f, current_price=%f, profit=%f" % (self.buy_price, self.count, self.loss_price, self.current_price, self.get_profit ())
 
 class MarketInfo(object):
     '''开仓信息'''
@@ -64,10 +70,10 @@ class Account(object):
         self.trade_history_list.append (TradeRecord (date, code, price, count, 1))
         self.current_assets -= (price * count)
         info = self.market[code]
+        print "buy, date=%s, price=%f, count=%d, loss_price=%f, current_assets=%f" % (date, price, count, price - 2*info.n, self.current_assets)
         if code not in self.position_dict:
             # 新开仓
             self.position_dict[code] = [TurtleTradeNode(price, count, price - 2*info.n)]
-            print "buy, date=%s, price=%f, count=%d, loss_price=%f" % (date, price, count, price - 2*info.n)
             return
         # 加仓
         # 前面仓位止损价格提高n/2
@@ -75,7 +81,6 @@ class Account(object):
             item.loss_price += (info.n/2)
             print "incr loss_price:", item.buy_price, item.loss_price
         self.position_dict[code].append (TurtleTradeNode(price, count, price - 2*info.n))
-        print "buy, date=%s, price=%f, count=%d, loss_price=%f" % (date, price, count, price - 2*info.n)
 
     def sell(self, code, date, node, price):
         self.trade_history_list.append (TradeRecord (date, code, price, node.count, -1))
@@ -118,7 +123,7 @@ class Account(object):
 
     def print_assets(self):
         print "Account Summary:"
-        print "Assets:", self.current_assets
+        print "Assets:", self.current_assets , "Total Profit:", self.current_assets - self.total_assets
         print "Trade Record:"
         for code, record in self.position_dict.items ():
             for item in record:
