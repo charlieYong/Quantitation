@@ -138,7 +138,7 @@ def back_testing (Code, data, nday_break_through=20):
             print '20s break through: date=%s, price=%f' % (xdate , break_through_price)
             if is_last_break_profit:
                 print 'last break is profitable, ignore this break'
-                no_trade_break = BreakThrough(break_through_price, break_through_price - 2*xn)
+                no_trade_break = BreakThrough(xdate, break_through_price, break_through_price - 2*xn)
                 continue
             unit = cal_position_unit (xn, account.current_assets)
             account.set_market_info (Code, xn, unit)
