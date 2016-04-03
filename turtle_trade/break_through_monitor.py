@@ -69,7 +69,7 @@ class BreakThroughMonitor(object):
             if cur is None:
                 max_price = self.get_max_price (data, i-nday-1, i-1)
                 if xhigh >= max_price:
-                    cur = BreakThrough (xdate, max_price, max_price-xn/2)
+                    cur = BreakThrough (xdate, max_price, max_price-xn*2)
                     l.append (cur)
             else:
                 if xlow <= cur.loss_price:
@@ -82,31 +82,78 @@ class BreakThroughMonitor(object):
                         cur = None
         return l
 
+    def check_trend (self, data, nday=5):
+        check = len (data) - nday
+        return data[-1][4] > data[check][4]
+
+    def get_trend (self, data, nday=20):
+        count = len (data)
+        max_price = self.get_max_price (data, count-20, count)
+        min_price = self.get_min_price (data, count-20, count)
+        return (max_price-min_price)/min_price
+
+    def continueous_fall (self, data, nday=2, percent=0.05):
+        l = len (data)
+        idx = l - nday
+        total_fall = 0
+        for i in xrange (idx, l):
+            last_close = data[i-1][4]
+            cur_close = data[i][4]
+            if cur_close < last_close:
+                total_fall += (last_close - cur_close)
+                if ((i-idx+1) >= nday) and (total_fall/cur_close >= percent):
+                    return True
+
+            else:
+                break
+        return False
+
     def start (self):
         end = self.last_trade_date ()
         start = self.get_start_date (end, 100)
         for code in self.code_list:
-            df = ts.get_hist_data (code, start, end)
-            if len (df.index) < 21 or end != df.index[0]:
+            df = ts.get_h_data (code, start, end, retry_count=5)
+            if df is None:
+                print "fail to get history data:", code
                 continue
-            print "check ", code
+            if len (df.index) < 21 or end != df.index[0].strftime ("%Y-%m-%d"):
+                continue
             # 按日期重新排序，时间升序
-            df = df.reindex (index=df.index[::-1])
+            df = df.sort_index (ascending=True)
             data = cal_tr_and_n (df)
             break_list = self.get_break_through_list (data)
-            if len (break_list) > 0 and not break_list[-1].is_complete ():
-                print "break through ing, ignore:", code, break_list[-1]
+            if len (break_list) > 0:
+                last = break_list[-1]
+                if not last.is_complete ():
+                    #print "break through ing, ignore:", code, last
+                    continue
+                elif last.is_profitable ():
+                    #print "last break is profit, ignore:", code, last
+                    continue
+            '''
+            趋势判断：
+                最近五天趋势为向上
+                排除连续两天下跌的
+            '''
+            if not self.check_trend (data):
+                print "not a up trend:", code
                 continue
-            lastest = len (data) - 1
-            max_price = self.get_max_price (data, lastest-20, lastest)
+            if self.continueous_fall (data):
+                print "continueous fall:", code
+                continue
+            count = len (data) - 1
+            max_price = self.get_max_price (data, count-20, count)
             cur_price = data[-1][4]
             if cur_price < max_price and cur_price*1.08 >= max_price:
+                # 计算20天最低值到目前的涨幅（倾斜度）
                 percent = "%.2f%%" % ((max_price - cur_price)/cur_price * 100)
-                print "about to break through:", code, cur_price, max_price, percent, self.get_stock_info (code, cur_price) 
+                print "-->about to break through:"
+                print "---->", code, cur_price, max_price, percent, self.get_stock_info (code, cur_price), self.get_trend (data)
+                print
 
 
 if __name__ == "__main__":
     b = BreakThroughMonitor()
     b.start ()
-    #df = ts.get_hist_data ("600710", "2016-03-31", "2016-03-31")
-    #print len (df.index)
+    #df = ts.get_h_data ("300029", "2016-03-31", "2016-04-01")
+    #print df
