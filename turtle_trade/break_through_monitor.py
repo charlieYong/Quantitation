@@ -30,10 +30,24 @@ class BreakThroughMonitor(object):
         if now.tm_hour >= A_CLOSE_HOUR:
             i = 0
         last_trade_date = None
+        '''
+        # is_holiday 函数有bug
         while (True):
             last_trade_date = time.strftime (DATE_FORMAT, time.localtime (time.time () - i*86400))
             i += 1
             if not ts.util.dateu.is_holiday (last_trade_date):
+                break
+        '''
+        # 由于tushare的代码有bug，这里先自己实现
+        cal = ts.util.dateu.trade_cal ()
+        # 格式为 2016/4/4
+        cal = cal[cal.isOpen == 1]['calendarDate'].values
+        while (True):
+            t = time.localtime (time.time () - i*86400)
+            d = "%d/%d/%d" % (t.tm_year, t.tm_mon, t.tm_mday)
+            i += 1
+            if d in cal:
+                last_trade_date = time.strftime (DATE_FORMAT, t)
                 break
         print 'last trade date:', last_trade_date
         return last_trade_date
