@@ -68,6 +68,7 @@ def back_testing (Code, data, nday_break_through=20):
     # 原始资产
     TotalAssets = 10 * 10000
     account = Account(TotalAssets)
+    print "current tr=%.2f, n=%.2f" % (data[-1][5], data[-1][6])
     # 从第n+1日开始遍历，计算突破
     for i in xrange (nday_break_through+1, len (data)):
         xdate, xopen, xhigh, xlow, xclose, xtr, xn = data[i]
