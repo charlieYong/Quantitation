@@ -63,6 +63,7 @@ if __name__ == "__main__":
     data = cal_tr_and_n (df)
     curdate, curprice, tr, n = data[-1]
     position_unit = cal_position_unit (n, assets)
+    print "date=%s, tr=%.2f, n=%.2f" % (data[-2][0], data[-2][2], data[-2][3])
     print "date=%s, tr=%.2f, n=%.2f" % (curdate, tr, n)
     if price <= 0:
         price = curprice
