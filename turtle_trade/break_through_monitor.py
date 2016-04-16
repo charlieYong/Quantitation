@@ -144,14 +144,6 @@ class BreakThroughMonitor(object):
         if now.tm_hour >= A_CLOSE_HOUR:
             i = 0
         last_trade_date = None
-        '''
-        # is_holiday 函数有bug
-        while (True):
-            last_trade_date = time.strftime (DATE_FORMAT, time.localtime (time.time () - i*86400))
-            i += 1
-            if not ts.util.dateu.is_holiday (last_trade_date):
-                break
-        '''
         # 由于tushare的代码有bug，这里先自己实现
         cal = ts.util.dateu.trade_cal ()
         # 格式为 2016/4/4
@@ -177,14 +169,15 @@ class BreakThroughMonitor(object):
     def start (self):
         end = self.last_trade_date ()
         start = self.get_start_date (end, 100)
+        # 分配每个线程的代码任务列表
         count = 40
-        thread_list = []
         task_list = [[] for i in xrange (0, count)]
         idx = 0
         for code in self.code_list:
             task_list[idx].append (code)
             idx += 1
             idx %= count
+        thread_list = []
         for i in xrange (0, count):
             t = Monitor (i, task_list[i], start, end)
             t.start ()
