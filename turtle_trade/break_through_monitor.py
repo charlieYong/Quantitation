@@ -20,12 +20,12 @@ from back_testing_online import *
 lock = mp.Lock ()
 
 def delete_break_file ():
-    filename = "break_%s.txt" % time.strftime ("%Y%m%d", time.localtime (time.time ()))
+    filename = "break_monitor_%s.txt" % time.strftime ("%Y%m%d", time.localtime (time.time ()))
     if os.path.exists (filename):
         os.remove (filename)
 
 def write_break_node (node):
-    filename = "break_%s.txt" % time.strftime ("%Y%m%d", time.localtime (time.time ()))
+    filename = "break_monitor_%s.txt" % time.strftime ("%Y%m%d", time.localtime (time.time ()))
     f = open (filename, "a")
     f.write ("%s\n" % node)
     f.flush ()
@@ -39,7 +39,7 @@ class AboutToBreakNode(object):
 
     def __str__(self):
         percent_to_break = "%.2f%%" % ((self.break_price- self.price)/self.price * 100)
-        return "%s price=%.2f, break_price=%2.f, percent_to_break=%s, recent_trend=%.2f" % (self.code, self.price, self.break_price, percent_to_break, self.trend)
+        return "%s price=%.2f, break_price=%.2f, percent_to_break=%s, recent_trend=%.2f" % (self.code, self.price, self.break_price, percent_to_break, self.trend)
 
 
 class Monitor(mp.Process):
@@ -178,10 +178,9 @@ class Monitor(mp.Process):
 
 class BreakThroughMonitor(object):
     def __init__ (self, code_list=None):
-        self.stock_info = ts.get_stock_basics ()
         self.code_list = code_list
         if self.code_list is None:
-            self.code_list = self.stock_info.index.tolist()
+            self.code_list = ts.get_stock_basics ().index.tolist()
 
     def last_trade_date (self):
         '''找到最近一个交易日期'''
@@ -242,7 +241,8 @@ class BreakThroughMonitor(object):
 
 
 if __name__ == "__main__":
-    b = BreakThroughMonitor()
+    l = ["002630", "002636", "600348", "600527", "601233"]
+    b = BreakThroughMonitor(l)
     b.start ()
     #df = ts.get_h_data ("300029", "2016-03-31", "2016-04-01")
     #print df

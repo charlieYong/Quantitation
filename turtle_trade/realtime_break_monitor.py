@@ -25,15 +25,22 @@ class RealTimeMonitor(object):
         '''
         while True:
             qslist = ts.get_realtime_quotes (self.codelist).itertuples ()
+            print "-" * 20
             for qs in qslist:
                 price = float(qs.price)
                 break_price = self.break_price_dict[qs.code]
                 percent = "%.2f%%" % ((break_price - price)/price *  100)
                 print "%s, now=%.2f, break=%.2f, need=%s" % (qs.code, price, break_price, percent)
+            print "-" * 20
+            print "\n"
             sys.stdout.flush ()
             time.sleep (3)
 
 def parse_monitor_file (filename):
+    '''
+    文件格式：
+    股票代码 突破价格
+    '''
     Monitor = namedtuple ("Monitor", "code break_price")
     monitorlist = []
     with open (filename) as f:
