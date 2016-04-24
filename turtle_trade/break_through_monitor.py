@@ -160,7 +160,7 @@ class Monitor(mp.Process):
         count = len (data) - 1
         max_price = self.get_max_price (data, count-20, count)
         cur_price = data[-1][4]
-        if cur_price < max_price and cur_price*1.07 >= max_price:
+        if cur_price < max_price and cur_price*1.055 >= max_price:
             break_node = AboutToBreakNode(code, cur_price, max_price, self.get_trend(data))
             self.myprint (break_node)
             lock.acquire ()
