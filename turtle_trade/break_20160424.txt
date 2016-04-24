@@ -1,0 +1,5 @@
+002630 price=11.09, break_price=11, percent_to_break=1.26%, recent_trend=0.07
+002636 price=15.93, break_price=16, percent_to_break=2.13%, recent_trend=0.12
+600348 price=7.51, break_price= 8, percent_to_break=1.60%, recent_trend=0.16
+600527 price=6.41, break_price= 7, percent_to_break=1.56%, recent_trend=0.10
+601233 price=13.00, break_price=13, percent_to_break=3.69%, recent_trend=0.22
